@@ -17,7 +17,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name", { length: 50 }).notNull(),
   lastName: varchar("last_name", { length: 50 }),
   email: varchar("email", { length: 100 }).notNull().unique(),
-  password: varchar("password", { length: 60 }).notNull(),
+  password: varchar("password", { length: 200 }).notNull(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -36,15 +36,15 @@ export const transactions = pgTable(
     }).notNull(),
     amount: numeric("amount", { precision: 18, scale: 3 }).notNull(),
     description: varchar("description", { length: 500 }),
-    created_by_user_id: varchar("created_by_user_id").notNull(),
-
+    sourceId: varchar("source_id"),
+    createdByUserId: varchar("created_by_user_id").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     fk: foreignKey({
       name: "user_fk",
-      columns: [table.created_by_user_id],
+      columns: [table.createdByUserId],
       foreignColumns: [users.id],
     }).onDelete("cascade"),
   })
@@ -58,8 +58,8 @@ export const sources = pgTable(
       .primaryKey(),
 
     title: varchar("title", { length: 100 }).notNull(),
-    isActive: boolean("is_active").default(false).notNull(),
-    created_by_user_id: varchar("created_by_user_id").notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdByUserId: varchar("created_by_user_id").notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -68,7 +68,7 @@ export const sources = pgTable(
   (table) => ({
     fk: foreignKey({
       name: "user_fk",
-      columns: [table.created_by_user_id],
+      columns: [table.createdByUserId],
       foreignColumns: [users.id],
     }).onDelete("cascade"),
   })
@@ -80,17 +80,22 @@ export const userRelations = relations(users, ({ many }) => ({
 }));
 
 export const transactionRelations = relations(transactions, ({ one }) => ({
-  created_by_user_id: one(users, {
-    fields: [transactions.created_by_user_id],
+  createdByUserId: one(users, {
+    fields: [transactions.createdByUserId],
     references: [users.id],
+  }),
+  sourceId: one(sources, {
+    fields: [transactions.sourceId],
+    references: [sources.id],
   }),
 }));
 
-export const sourcesRelations = relations(sources, ({ one }) => ({
-  created_by_user_id: one(users, {
-    fields: [sources.created_by_user_id],
+export const sourcesRelations = relations(sources, ({ one, many }) => ({
+  createdByUserId: one(users, {
+    fields: [sources.createdByUserId],
     references: [users.id],
   }),
+  transactions: many(transactions),
 }));
 
 export const tables = {

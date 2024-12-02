@@ -5,9 +5,12 @@
     "@sinclair/typebox": "0.32.4"
   },
   "scripts": {
-    "dev": "bun run stop:db && bun run start:db && bun run --watch src/index.ts",
+    "dev": "bun run stop:db && bun run start:db && bun run sync:db && bun run --watch src/index.ts",
     "start:db": "docker compose up -d",
-    "stop:db": "docker compose down"
+    "stop:db": "docker compose down",
+    "generate:migrations": "bun drizzle-kit generate",
+    "apply:migrations": "bun drizzle-kit migrate",
+    "sync:db": "bun run generate:migrations && bun run apply:migrations"
   },
   "dependencies": {
     "@elysiajs/jwt": "^1.1.1",
