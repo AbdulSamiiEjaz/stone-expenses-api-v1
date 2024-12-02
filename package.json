@@ -1,15 +1,26 @@
 {
   "name": "stone_expenses",
-  "version": "1.0.50",
+  "version": "1.0.0",
+  "overrides": {
+    "@sinclair/typebox": "0.32.4"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run stop:db && bun run start:db && bun run --watch src/index.ts",
+    "start:db": "docker compose up -d",
+    "stop:db": "docker compose down"
   },
   "dependencies": {
-    "elysia": "latest"
+    "@elysiajs/jwt": "^1.1.1",
+    "@elysiajs/swagger": "^1.1.6",
+    "drizzle-orm": "^0.36.4",
+    "drizzle-typebox": "^0.1.1",
+    "elysia": "latest",
+    "pg": "^8.13.1"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "@types/pg": "^8.11.10",
+    "bun-types": "latest",
+    "drizzle-kit": "^0.28.1"
   },
   "module": "src/index.js"
 }
