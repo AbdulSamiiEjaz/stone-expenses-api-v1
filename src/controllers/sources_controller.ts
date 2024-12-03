@@ -3,9 +3,27 @@ import { getLoggedInUserInfo } from "../plugins/auth_plugin";
 import { db } from "../drizzle/drizzle";
 import { tables } from "../drizzle/schema";
 import { and, eq } from "drizzle-orm";
+import { spreads } from "../utils/helpers";
+import { createInsertSchema, createSelectSchema } from "drizzle-typebox";
+
+export const _sourcesSchema = {
+  insert: spreads(
+    {
+      source: createInsertSchema(tables.sources, {
+        title: t.String({ minLength: 2, maxLength: 100 }),
+      }),
+    },
+    "insert"
+  ),
+} as const;
 
 export const sources_controller = new Elysia({ prefix: "/sources" })
   .use(getLoggedInUserInfo)
+  .model({
+    "sources.insert": t.Object({
+      title: _sourcesSchema.insert.source.title,
+    }),
+  })
   .get("/", async ({ userId }) => {
     const sourcesArr = await db
       .select()
@@ -39,9 +57,7 @@ export const sources_controller = new Elysia({ prefix: "/sources" })
       };
     },
     {
-      body: t.Object({
-        title: t.String({ minLength: 2, maxLength: 100 }),
-      }),
+      body: "sources.insert",
     }
   )
   .guard({
@@ -73,7 +89,7 @@ export const sources_controller = new Elysia({ prefix: "/sources" })
       const sourceArr = await db
         .update(tables.sources)
         .set({
-          title: body.title,
+          title: "sources.insert",
           updatedAt: new Date(),
         })
         .where(
@@ -92,9 +108,7 @@ export const sources_controller = new Elysia({ prefix: "/sources" })
       return { success: true, id: sourceArr[0].id };
     },
     {
-      body: t.Object({
-        title: t.String({ minLength: 2, maxLength: 100 }),
-      }),
+      body: "sources.insert",
     }
   )
   .delete("/:id", async ({ userId, params: { id }, error }) => {

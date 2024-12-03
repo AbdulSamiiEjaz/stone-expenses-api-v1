@@ -3,8 +3,24 @@ import { Elysia } from "elysia";
 import { auth_controller } from "./controllers/auth_controller";
 import { transactions_controller } from "./controllers/transactions_controller";
 import { sources_controller } from "./controllers/sources_controller";
+import logixlysia from "logixlysia";
 
 const app = new Elysia()
+  .use(
+    logixlysia({
+      config: {
+        showStartupMessage: true,
+        startupMessageFormat: "simple",
+        timestamp: {
+          translateTime: "yyyy-mm-dd HH:MM:ss",
+        },
+        ip: true,
+        logFilePath: "./logs/development.log",
+        customLogFormat:
+          "🚀 {now} {level} {duration} {method} {pathname} {status} {message} {ip} {epoch}",
+      },
+    })
+  )
   .use(
     swagger({
       path: "/v1/swagger",

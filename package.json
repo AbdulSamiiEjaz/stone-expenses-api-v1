@@ -19,6 +19,7 @@
     "drizzle-orm": "^0.36.4",
     "drizzle-typebox": "^0.1.1",
     "elysia": "latest",
+    "logixlysia": "^4.0.0",
     "pg": "^8.13.1"
   },
   "devDependencies": {

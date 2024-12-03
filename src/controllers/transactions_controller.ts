@@ -6,13 +6,15 @@ import { and, eq } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-typebox";
 
 const _transactionSchema = {
-  insert: createInsertSchema(tables.transactions),
-};
+  insert: createInsertSchema(tables.transactions, {
+    amount: t.Numeric(),
+  }),
+} as const;
 
 export const transactions_controller = new Elysia({ prefix: "/transactions" })
   .use(getLoggedInUserInfo)
   .model({
-    insert: t.Omit(_transactionSchema.insert, [
+    "transactions.insert": t.Omit(_transactionSchema.insert, [
       "id",
       "createdByUserId",
       "createdAt",
@@ -21,8 +23,20 @@ export const transactions_controller = new Elysia({ prefix: "/transactions" })
   })
   .get("/", async ({ userId }) => {
     const transactions = await db
-      .select()
+      .select({
+        id: tables.transactions.id,
+        type: tables.transactions.type,
+        amount: tables.transactions.amount,
+        createdAt: tables.transactions.createdAt,
+        updatedAt: tables.transactions.updatedAt,
+        description: tables.transactions.description,
+        sourceTitle: tables.sources.title,
+      })
       .from(tables.transactions)
+      .leftJoin(
+        tables.sources,
+        eq(tables.sources.id, tables.transactions.sourceId)
+      )
       .where(eq(tables.transactions.createdByUserId, userId));
 
     return { success: true, data: transactions };
@@ -34,7 +48,7 @@ export const transactions_controller = new Elysia({ prefix: "/transactions" })
         .insert(tables.transactions)
         .values({
           type: body.type,
-          amount: body.amount,
+          amount: body.amount.toString(),
           description: body.description,
           createdByUserId: userId,
           sourceId: body.sourceId,
@@ -48,7 +62,7 @@ export const transactions_controller = new Elysia({ prefix: "/transactions" })
       return { success: true, id: result[0].id };
     },
     {
-      body: "insert",
+      body: "transactions.insert",
     }
   )
   .guard({
@@ -58,8 +72,20 @@ export const transactions_controller = new Elysia({ prefix: "/transactions" })
   })
   .get("/:id", async ({ userId, params: { id }, error }) => {
     const transaction = await db
-      .select()
+      .select({
+        id: tables.transactions.id,
+        type: tables.transactions.type,
+        amount: tables.transactions.amount,
+        createdAt: tables.transactions.createdAt,
+        updatedAt: tables.transactions.updatedAt,
+        description: tables.transactions.description,
+        sourceTitle: tables.sources.title,
+      })
       .from(tables.transactions)
+      .leftJoin(
+        tables.sources,
+        eq(tables.sources.id, tables.transactions.sourceId)
+      )
       .where(
         and(
           eq(tables.transactions.id, id),
@@ -80,7 +106,7 @@ export const transactions_controller = new Elysia({ prefix: "/transactions" })
         .update(tables.transactions)
         .set({
           type: body.type,
-          amount: body.amount,
+          amount: body.amount.toString(),
           description: body.description,
         })
         .where(
@@ -98,7 +124,7 @@ export const transactions_controller = new Elysia({ prefix: "/transactions" })
       return { success: true, id: transaction[0].id };
     },
     {
-      body: "insert",
+      body: "transactions.insert",
     }
   )
   .delete("/:id", async ({ userId, params: { id }, error }) => {
