@@ -46,3 +46,12 @@ const app = new Elysia()
 console.log(
   `🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}/v1/swagger`
 );
+
+async function gracefulShutdown() {
+  console.log("Received shutdown signal. Closing server gracefully...");
+  await app.server?.stop();
+  console.log("Server has been shut down.");
+}
+
+process.on("SIGINT", gracefulShutdown);
+process.on("SIGTERM", gracefulShutdown);

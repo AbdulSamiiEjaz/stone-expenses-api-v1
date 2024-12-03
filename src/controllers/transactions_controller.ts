@@ -2,7 +2,7 @@ import Elysia, { t } from "elysia";
 import { getLoggedInUserInfo } from "../plugins/auth_plugin";
 import { db } from "../drizzle/drizzle";
 import { tables } from "../drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-typebox";
 
 const _transactionSchema = {
@@ -21,26 +21,59 @@ export const transactions_controller = new Elysia({ prefix: "/transactions" })
       "updatedAt",
     ]),
   })
-  .get("/", async ({ userId }) => {
-    const transactions = await db
-      .select({
-        id: tables.transactions.id,
-        type: tables.transactions.type,
-        amount: tables.transactions.amount,
-        createdAt: tables.transactions.createdAt,
-        updatedAt: tables.transactions.updatedAt,
-        description: tables.transactions.description,
-        sourceTitle: tables.sources.title,
-      })
-      .from(tables.transactions)
-      .leftJoin(
-        tables.sources,
-        eq(tables.sources.id, tables.transactions.sourceId)
-      )
-      .where(eq(tables.transactions.createdByUserId, userId));
+  .get(
+    "/",
+    async ({ userId, query }) => {
+      const page = query.page ?? 1;
+      const itemsPerPage = query.itemsPerPage ?? 10;
 
-    return { success: true, data: transactions };
-  })
+      const totalTransactionsCount = await db
+        .select({
+          count: count(),
+        })
+        .from(tables.transactions)
+        .where(eq(tables.transactions.createdByUserId, userId));
+
+      const offset = (page - 1) * itemsPerPage;
+
+      const transactions = await db
+        .select({
+          id: tables.transactions.id,
+          type: tables.transactions.type,
+          amount: tables.transactions.amount,
+          createdAt: tables.transactions.createdAt,
+          updatedAt: tables.transactions.updatedAt,
+          description: tables.transactions.description,
+          sourceTitle: tables.sources.title,
+        })
+        .from(tables.transactions)
+        .leftJoin(
+          tables.sources,
+          eq(tables.sources.id, tables.transactions.sourceId)
+        )
+        .where(eq(tables.transactions.createdByUserId, userId))
+        .orderBy(desc(tables.transactions.createdAt))
+        .limit(itemsPerPage)
+        .offset(offset);
+
+      const totalPages = Math.ceil(
+        totalTransactionsCount[0].count / itemsPerPage
+      );
+
+      return {
+        success: true,
+        data: transactions,
+        totalItems: totalTransactionsCount[0].count,
+        totalPages,
+      };
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Numeric()),
+        itemsPerPage: t.Optional(t.Numeric()),
+      }),
+    }
+  )
   .post(
     "/",
     async ({ userId, body, error }) => {

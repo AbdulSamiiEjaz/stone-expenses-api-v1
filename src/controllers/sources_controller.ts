@@ -2,7 +2,7 @@ import Elysia, { t } from "elysia";
 import { getLoggedInUserInfo } from "../plugins/auth_plugin";
 import { db } from "../drizzle/drizzle";
 import { tables } from "../drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { spreads } from "../utils/helpers";
 import { createInsertSchema, createSelectSchema } from "drizzle-typebox";
 
@@ -24,18 +24,53 @@ export const sources_controller = new Elysia({ prefix: "/sources" })
       title: _sourcesSchema.insert.source.title,
     }),
   })
-  .get("/", async ({ userId }) => {
-    const sourcesArr = await db
-      .select()
-      .from(tables.sources)
-      .where(
-        and(
-          eq(tables.sources.createdByUserId, userId),
-          eq(tables.sources.isActive, true)
+  .get(
+    "/",
+    async ({ userId, query }) => {
+      const page = query?.page ?? 1;
+      const itemsPerPage = query?.itemsPerPage ?? 10;
+
+      const offset = (page - 1) * itemsPerPage;
+
+      const totalItems = await db
+        .select({ count: count() })
+        .from(tables.sources)
+        .where(
+          and(
+            eq(tables.sources.createdByUserId, userId),
+            eq(tables.sources.isActive, true)
+          )
+        );
+
+      const sourcesArr = await db
+        .select()
+        .from(tables.sources)
+        .where(
+          and(
+            eq(tables.sources.createdByUserId, userId),
+            eq(tables.sources.isActive, true)
+          )
         )
-      );
-    return { success: true, data: sourcesArr };
-  })
+        .orderBy(desc(tables.sources.createdAt))
+        .limit(itemsPerPage)
+        .offset(offset);
+
+      const totalPages = Math.ceil(totalItems[0].count / itemsPerPage);
+
+      return {
+        success: true,
+        data: sourcesArr,
+        totalItems: totalItems[0].count,
+        totalPages,
+      };
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Numeric()),
+        itemsPerPage: t.Optional(t.Numeric()),
+      }),
+    }
+  )
   .post(
     "/",
     async ({ body, userId, error }) => {
